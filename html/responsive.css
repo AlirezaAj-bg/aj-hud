@@ -1,0 +1,28 @@
+/* ---------- minimap frame placement ----------
+   The rest of the HUD is sized in vh (styles.css) and needs no per-resolution
+   rules. Only the .square/.circle frame has to sit on top of the native GTA
+   minimap, which client.lua's ApplyMinimapPosition places top-right while
+   driving.
+
+   The old layout positioned this frame with a negative top % that only
+   landed right because the (in-flow) compass/street card above pushed it
+   down ~97px at 1080p. The NoPixel layout takes that card out of the flow,
+   so the frame is pinned with position: fixed to the exact spot the old
+   in-game layout produced at 1920x1080: top 65px, 145.8px from the right
+   edge -- expressed in vh so it follows the minimap (whose position is a
+   screen fraction) on every 16:9 resolution. */
+
+.square {
+    position: fixed !important;
+    left: auto !important;
+    right: 11.5vh !important;
+    top: 6.25vh !important;
+}
+.circle {
+    position: fixed !important;
+    left: auto !important;
+    right: 13.5vh !important;
+    top: 6.05vh !important;
+    width: 29.1vh !important;
+    height: 22.9vh !important;
+}

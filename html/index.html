@@ -1,0 +1,252 @@
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <meta id="viewport" name="viewport" content ="width=device-width, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <link rel="stylesheet" type="text/css" href="theme.css"/>
+        <link rel="stylesheet" type="text/css" href="styles.css"/>
+        <link rel="stylesheet" type="text/css" href="responsive.css"/>
+        <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.13.0/css/all.css"/>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js" defer></script>
+        <script src="app.js" defer></script>
+    </head>
+    <body>
+        <!-- Heading + zone/street, NoPixel-style: "072°" above the minimap,
+             zone and street centered below it. Positioned by app.js against
+             the minimap frame (.circle/.square) when it is on screen. -->
+        <div id="baseplate-container" v-show="show">
+            <div class="np-heading" v-if="showCompass" :style="headingStyle">{{ headingText }}</div>
+            <div class="np-location" v-if="showStreets && (zone || street1)" :style="locationStyle">
+                <div class="np-zone" v-if="zone">{{ zone }}</div>
+                <div class="np-street" v-if="street1">{{ street1 }}</div>
+            </div>
+        </div>
+        <div id="openmenu">
+            <div id="menu">
+                <div class="nm-backdrop" @click="closeMenu"></div>
+                <div class="nm-panel" :key="openCount">
+                    <aside class="nm-side">
+                        <div class="nm-brand">
+                            <div class="nm-brand-mark"><i class="fas fa-sliders-h"></i></div>
+                            <div class="nm-brand-text">
+                                <span class="nm-brand-title">HUD</span>
+                                <span class="nm-brand-sub">SETTINGS</span>
+                            </div>
+                        </div>
+
+                        <nav class="nm-nav">
+                            <button v-for="tab in tabs" :key="tab.key" class="nm-nav-item" :class="{ active: activeTab === tab.key && !isSearching }" @click="setActiveTab(tab.key)">
+                                <span class="nm-nav-icon"><i :class="tab.icon"></i></span>
+                                <span class="nm-nav-label">{{ tab.label }}</span>
+                                <span class="nm-nav-count">{{ activeCount(tab) }}/{{ tab.items.length }}</span>
+                            </button>
+                        </nav>
+
+                        <div class="nm-side-actions">
+                            <button class="nm-btn" @click="restartHud">
+                                <i class="fas fa-redo-alt"></i><span>Reload HUD</span>
+                            </button>
+                            <button class="nm-btn danger" :class="{ confirming: confirmReset }" @click="resetStorage">
+                                <i class="fas" :class="confirmReset ? 'fa-exclamation-triangle' : 'fa-undo'"></i>
+                                <span>{{ confirmReset ? 'Click again to confirm' : 'Reset to defaults' }}</span>
+                            </button>
+                        </div>
+                    </aside>
+
+                    <section class="nm-main">
+                        <header class="nm-head">
+                            <div class="nm-head-text">
+                                <div class="nm-head-title">{{ isSearching ? 'Search results' : currentTab.label }}</div>
+                                <div class="nm-head-desc">{{ isSearching ? resultCount + ' matching settings' : currentTab.desc }}</div>
+                            </div>
+                            <label class="nm-search">
+                                <i class="fas fa-search"></i>
+                                <input type="text" v-model="searchQuery" placeholder="Search settings…" spellcheck="false" />
+                                <button class="nm-search-clear" v-if="isSearching" @click.prevent="searchQuery = ''"><i class="fas fa-times"></i></button>
+                            </label>
+                            <button class="nm-close" @click="closeMenu" title="Close (ESC)"><i class="fas fa-times"></i></button>
+                        </header>
+
+                        <div class="nm-body">
+                            <template v-for="group in visibleGroups" :key="group.key">
+                                <div class="nm-group-title" v-if="isSearching">{{ group.label }}</div>
+                                <div class="nm-grid">
+                                    <button v-for="(item, i) in group.items" :key="item.key" class="nm-card" :class="{ on: isOn(item) }" :style="{ animationDelay: (i * 25) + 'ms' }" @click="toggle(item)">
+                                        <span class="nm-card-icon"><i :class="item.icon"></i></span>
+                                        <span class="nm-card-text">
+                                            <span class="nm-card-label">{{ item.label }}</span>
+                                            <span class="nm-card-desc">{{ item.desc }}</span>
+                                        </span>
+                                        <span class="nm-switch"><span class="nm-switch-knob"></span></span>
+                                    </button>
+                                </div>
+                            </template>
+                            <div class="nm-empty" v-if="isSearching && resultCount === 0">
+                                <i class="fas fa-search"></i>
+                                <span>No setting matches "{{ searchQuery }}"</span>
+                            </div>
+                        </div>
+
+                        <footer class="nm-foot">
+                            <span class="nm-foot-item"><span class="nm-key">ESC</span>Close</span>
+                            <span class="nm-foot-item"><span class="nm-key">{{ openKey }}</span>Open menu</span>
+                            <span class="nm-foot-item"><span class="nm-key">ALT</span>Click HUD icons while driving</span>
+                            <span class="nm-foot-item saved"><span class="nm-dot"></span>Saved automatically</span>
+                        </footer>
+                    </section>
+                </div>
+            </div>
+        </div>
+        <div id="main-container">
+            <div id="money-container">
+                <div id="money-cash">
+                    <transition name="slide-fade">
+                        <div class="money-pill" v-if="showCash"><span class="money-icon">$</span><span class="money-value">{{(cash)}}</span></div>
+                    </transition>
+                </div>
+                <div id="money-bank">
+                    <transition name="slide-fade">
+                        <div class="money-pill bank" v-if="showBank"><span class="money-icon">$</span><span class="money-value">{{(bank)}}</span></div>
+                    </transition>
+                </div>
+                <div id="money-change" v-if="showUpdate">
+                    <div class="money-pill change" :class="{ minus: minus }" v-if="plus || minus"><span class="money-icon">{{ plus ? '+' : '−' }}</span><span class="money-value">{{(amount)}}</span></div>
+                </div>
+            </div>
+            <div id="ui-container">
+                <div id="playerHud" v-show="show">
+                    <div class="np-status">
+                        <transition name="fade">
+                        <div class="np-mic" v-if="showVoice" :style="{ '--mic-color': talkingColor }">
+                            <i :class="voiceIcon"></i>
+                        </div>
+                        </transition>
+
+                        <!-- Each column: a big stat pill on top, a thin bar + small icon under it -->
+                        <div class="np-col" v-if="showHealth || showHunger">
+                            <div class="np-pill" v-if="showHealth" :class="{ empty: health <= 0, critical: playerDead }">
+                                <div class="np-pill-fill" :style="{ width: health + '%' }"></div>
+                                <div class="np-pill-content"><i class="fas fa-heartbeat"></i><span>HEALTH</span></div>
+                            </div>
+                            <div class="np-pill-spacer" v-else></div>
+                            <div class="np-sub" v-if="showHunger" :class="{ critical: hungerCritical }">
+                                <div class="np-sub-bar"><div class="np-sub-fill" :style="{ width: hunger + '%' }"></div></div>
+                                <i class="fas fa-hamburger"></i>
+                            </div>
+                        </div>
+                        <div class="np-col" v-if="showArmor || showThirst">
+                            <div class="np-pill" v-if="showArmor" :class="{ empty: armor <= 0 }">
+                                <div class="np-pill-fill" :style="{ width: armor + '%' }"></div>
+                                <div class="np-pill-content"><i class="fas fa-shield-alt"></i><span>ARMOR</span></div>
+                            </div>
+                            <div class="np-pill-spacer" v-else></div>
+                            <div class="np-sub" v-if="showThirst" :class="{ critical: thirstCritical }">
+                                <div class="np-sub-bar"><div class="np-sub-fill" :style="{ width: thirst + '%' }"></div></div>
+                                <i class="fas fa-glass-whiskey"></i>
+                            </div>
+                        </div>
+                        <div class="np-col" v-if="showEngine || showStress">
+                            <div class="np-pill" v-if="showEngine" :class="{ empty: engine <= 0, critical: engine <= 45 }">
+                                <div class="np-pill-fill" :style="{ width: engine + '%' }"></div>
+                                <div class="np-pill-content"><i class="fas fa-oil-can"></i><span>ENGINE</span></div>
+                            </div>
+                            <div class="np-pill-spacer" v-else></div>
+                            <div class="np-sub stress" v-if="showStress">
+                                <div class="np-sub-bar"><div class="np-sub-fill" :style="{ width: stress + '%' }"></div></div>
+                                <i class="fas fa-brain"></i>
+                            </div>
+                        </div>
+                        <div class="np-col" v-if="showNos || showOxygen">
+                            <div class="np-pill" v-if="showNos" :class="{ empty: nos <= 0, active: nitroActive }">
+                                <div class="np-pill-fill" :style="{ width: nos + '%' }"></div>
+                                <div class="np-pill-content"><i class="fas fa-meteor"></i><span>NOS</span></div>
+                            </div>
+                            <div class="np-pill-spacer" v-else></div>
+                            <div class="np-sub" v-if="showOxygen">
+                                <div class="np-sub-bar"><div class="np-sub-fill" :style="{ width: oxygen + '%' }"></div></div>
+                                <i class="fas fa-lungs"></i>
+                            </div>
+                        </div>
+
+                        <!-- Status flags: small round chips, same family as the mic badge -->
+                        <div class="np-flags">
+                            <transition name="fade"><div class="np-chip armed" v-if="showArmed" title="Armed"><i class="fas fa-crosshairs"></i></div></transition>
+                            <transition name="fade"><div class="np-chip warn" v-if="showHarness" title="Harness"><i class="fas fa-user-shield"></i></div></transition>
+                            <transition name="fade"><div class="np-chip" v-if="showCruise" title="Cruise"><i class="fas fa-tachometer-alt"></i></div></transition>
+                            <transition name="fade"><div class="np-chip" v-if="showParachute" title="Parachute"><i class="fas fa-parachute-box"></i></div></transition>
+                            <transition name="fade"><div class="np-chip dev" v-if="showDev" title="Dev mode"><i class="fas fa-terminal"></i></div></transition>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="veh-container">
+                <div v-show="show">
+                    <transition name="fade">
+                    <div class="hint-bar" v-if="showHints">
+                        <template v-if="canLock">
+                            <span class="hint"><span class="hint-key">L</span>VEHICLE LOCK</span>
+                            <span class="hint-sep">/</span>
+                        </template>
+                        <span class="hint"><span class="hint-key">H</span>HEADLIGHTS</span>
+                        <span class="hint-sep">/</span>
+                        <span class="hint"><span class="hint-key">E</span>HORN</span>
+                        <span class="hint-sep">/</span>
+                        <span class="hint"><span class="hint-key">F</span>EXIT</span>
+                    </div>
+                    </transition>
+
+                    <!-- Speed gauge: segmented arc (speed), outer arc on the right (fuel),
+                         gear badge + zero-padded speed in the middle. All SVG so it
+                         scales cleanly with the vh-based box size. -->
+                    <div id="speedometer">
+                        <svg class="np-gauge" viewBox="0 0 220 200">
+                            <defs>
+                                <linearGradient id="npSpeedGrad" x1="0" y1="1" x2="1" y2="0">
+                                    <stop offset="0%" class="np-grad-a"/>
+                                    <stop offset="100%" class="np-grad-b"/>
+                                </linearGradient>
+                                <mask id="npTicks" maskUnits="userSpaceOnUse" x="0" y="0" width="220" height="200">
+                                    <path :d="speedArc" fill="none" stroke="#fff" stroke-width="14" stroke-dasharray="9 2.4"/>
+                                </mask>
+                            </defs>
+                            <g mask="url(#npTicks)">
+                                <path class="np-gauge-track" :d="speedArc" pathLength="100"/>
+                                <path class="np-gauge-fill" :d="speedArc" pathLength="100" :stroke-dasharray="speedPct + ' 100'"/>
+                            </g>
+                            <path class="np-fuel-track" :d="fuelArc" pathLength="100"/>
+                            <path class="np-fuel-fill" :d="fuelArc" pathLength="100" :stroke-dasharray="fuelPct + ' 100'" :style="{ stroke: fuelColor }"/>
+                            <text class="np-fuel-icon" x="203" y="106" text-anchor="middle" :style="{ fill: fuelColor }">&#xf52f;</text>
+
+                            <circle class="np-gear-ring" cx="86" cy="58" r="17"/>
+                            <text class="np-gear" x="86" y="59" text-anchor="middle" dominant-baseline="central">{{ gearText }}</text>
+                            <text class="np-gear-label" x="86" y="92" text-anchor="middle">GEAR</text>
+
+                            <text class="np-speed" x="88" y="150" text-anchor="middle"><tspan class="np-speed-dim">{{ speedDim }}</tspan><tspan>{{ speedLit }}</tspan></text>
+                            <text class="np-unit" x="88" y="168" text-anchor="middle">{{ unit }}</text>
+                            <text class="np-alt" v-if="showAltitude" x="88" y="186" text-anchor="middle">ALT {{ altitude }}</text>
+                        </svg>
+                    </div>
+
+                    <div class="icon-stack" id="iconStack">
+                        <div class="icon-btn clickable" title="Toggle headlights" @click="toggleHeadlights" :class="{ on: lightsOn }"><i class="fas fa-lightbulb"></i></div>
+                        <transition name="fade">
+                        <div class="icon-btn clickable" v-if="showSeatbelt" title="Toggle seatbelt" @click="toggleSeatbelt" :class="seatbelt ? 'on' : 'alert'"><i :class="seatbelt ? 'fas fa-user-check' : 'fas fa-user-slash'"></i></div>
+                        </transition>
+                        <div class="icon-btn clickable" title="Toggle door lock" @click="toggleLock" :class="locked ? 'on' : 'alert'"><i :class="locked ? 'fas fa-lock' : 'fas fa-lock-open'"></i></div>
+                    </div>
+
+                    <div class="border">
+                        <div class="square" v-if="mapVisible && mapShape === 'square'" :class="{ 'no-border': !mapBorder }"></div>
+                    </div>
+                    <div class="border">
+                        <div class="circle" v-if="mapVisible && mapShape === 'circle'" :class="{ 'no-border': !mapBorder }">
+                            <template v-if="mapLetters">
+                                <span class="np-cardinal" v-for="c in cardinals" :key="c.label" :style="c.style">{{ c.label }}</span>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

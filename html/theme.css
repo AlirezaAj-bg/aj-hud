@@ -1,0 +1,64 @@
+/* ============================================================
+   Theme tokens -- single source of truth for every color/size/font
+   used across styles.css. app.js never hardcodes a hex color for a
+   threshold state; it picks between var(--hud-color-x-state) names,
+   so the browser always resolves the live value -- no caching, no
+   race against Config.Theme's one-time SendNUIMessage on load (see
+   client.lua's sendTheme()), which overwrites the defaults below via
+   setProperty as soon as it arrives.
+   ============================================================ */
+:root {
+    --hud-accent: #00e5ff;
+    --hud-accent-rgb: 0, 229, 255; /* same color as r, g, b -- for rgba() glows; app.js keeps it in sync */
+
+    --hud-surface: rgba(8, 8, 10, 0.82);
+    --hud-surface-solid: #0a0a0c;
+    --hud-border: rgba(255, 255, 255, 0.12);
+    --hud-text: #ffffff;
+    --hud-text-dim: rgba(255, 255, 255, 0.55);
+
+    --hud-radius-pill: 5px;
+    --hud-radius-round: 999px;
+    --hud-font-display: 'Kanit', 'Work Sans', sans-serif;
+
+    --hud-color-health-ok: #3fa554;
+    --hud-color-health-critical: #ff2d2d;
+    --hud-color-armor-ok: #3aa0ff;
+    --hud-color-armor-critical: #ff2d2d;
+    --hud-color-hunger-ok: #e08a2b;
+    --hud-color-hunger-critical: #ff2d2d;
+    --hud-color-thirst-ok: #2ea3d6;
+    --hud-color-thirst-critical: #ff2d2d;
+    --hud-color-stress: #ff3b5c;
+    --hud-color-oxygen: #7fb8d9;
+    --hud-color-armed: #ff4885;
+    --hud-color-parachute: #d8d8d8;
+    --hud-color-harness: #b648ff;
+    --hud-color-cruise: #38e0c0;
+    --hud-color-nos-active: #ff4d6d;
+    --hud-color-nos-inactive: #ffffff;
+    --hud-color-dev: #ffd400;
+
+    --hud-color-engine-ok: #3fa554;
+    --hud-color-engine-warn: #e08a2b;
+    --hud-color-engine-critical: #ff2d2d;
+    --hud-color-fuel-ok: #ffffff;
+    --hud-color-fuel-warn: #e08a2b;
+    --hud-color-fuel-critical: #ff2d2d;
+    --hud-color-talking-idle: #ffffff;
+    --hud-color-talking-active: #ffe23e;
+    --hud-color-talking-radio: #ff4d6d;
+    --hud-color-seatbelt-off: #ff5100;
+    --hud-color-lights-on: #ffd400;
+    --hud-color-lights-off: #6b6b6b;
+    --hud-color-lock-locked: #3fa554;
+    --hud-color-lock-unlocked: #e08a2b;
+}
+
+@font-face {
+    font-family: 'Kanit';
+    font-style: italic;
+    font-weight: 800;
+    src: url('fonts/Kanit-ExtraBoldItalic.woff2') format('woff2');
+    font-display: swap;
+}
