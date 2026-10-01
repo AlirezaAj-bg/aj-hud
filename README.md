@@ -173,15 +173,4 @@ aj-hud/
 - **The minimap is still square for a player.** They have an old saved setting. Saves made before the NoPixel update are migrated to round automatically on the next load; otherwise use **Round minimap** in the menu, or **Reset to defaults**.
 - **The fuel arc shows 0.** Check that `qb-fuel` (or another `LegacyFuel` provider) is started before `aj-hud`.
 - **Don't add `backdrop-filter` to the CSS.** FiveM's browser renders it as solid black over the game.
-
----
-
-## راهنمای سریع (فارسی)
-
-- **نصب:** پوشه‌ی `aj-hud` رو داخل `resources/[aj]` بذار و مطمئن شو بعد از `qb-core` استارت می‌شه.
-- **منوی تنظیمات:** کلید **I**. همه‌ی گزینه‌ها همون لحظه اعمال و برای هر بازیکن جدا ذخیره می‌شن.
-- **کلیک روی دکمه‌های HUD موقع رانندگی:** کلید **ALT**.
-- **ری‌استارت HUD:** دستور `/resethud`.
-- **تنظیمات پیش‌فرض و رنگ‌ها:** فایل `config.lua` (بخش‌های `Config.Menu` و `Config.Theme`).
-- **واحد سرعت:** `Config.UseMPH = true` برای MPH، و `false` برای KPH.
-- **جای حلقه‌ی دور مینی‌مپ:** فایل `html/responsive.css`.
+`html/responsive.css`.
